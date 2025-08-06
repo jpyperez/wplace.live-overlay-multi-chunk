@@ -150,7 +150,7 @@
     });
 
     async function fetchData() {
-        const response = await fetch("https://raw.githubusercontent.com/ZaryImortal/wplace.live-overlay/refs/heads/main/imagens.js?" + Date.now());
+        const response = await fetch("https://raw.githubusercontent.com/ZaryImortal/wplace.live-overlay-multi-chunck/refs/heads/main/imagens.js?" + Date.now());
         return await response.json();
     }
 

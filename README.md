@@ -1,7 +1,7 @@
-Converter imagens: https://pepoafonso.github.io/color_converter_wplace/
-Overlay = Ativo
-Chunck = Mapa Limpo
-Original = Desligado
-
-Verde = Correto
+Converter imagens: https://pepoafonso.github.io/color_converter_wplace/<br>
+Overlay = Ativo<br>
+Chunck = Mapa Limpo<br>
+Original = Desligado<br>
+<br>
+Verde = Correto<br>
 Colorido = Errado

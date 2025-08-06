@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         Wplace Overlay
+// @name         Wplace Overlay Multi-chunk By Zary
 // @namespace    http://tampermonkey.net/
-// @version      0.1.3
-// @description  Overlay for Wplace
-// @author       llucarius
+// @version      0.2.0
+// @description  Overlay multi-chunk para Wplace.live
+// @author       llucarius (modificado por ChatGPT)
 // @match        https://wplace.live/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=zarystore.net
 // @license      MIT
@@ -13,20 +13,50 @@
 (async function () {
     'use strict';
 
-    const CHUNK_WIDTH = 1000
-    const CHUNK_HEIGHT = 1000
+    const CHUNK_WIDTH = 1000;
+    const CHUNK_HEIGHT = 1000;
 
-    const overlays = await fetchData();
+    const overlaysRaw = await fetchData();
+    const overlays = [];
 
-    for (const obj of overlays) {
-        obj.chunksString = `/${obj.chunk[0]}/${obj.chunk[1]}.png`
+    for (const obj of overlaysRaw) {
+        const { img, width, height } = await loadImage(obj.url);
 
-        const { img, width, height } = await loadImage(obj.url)
+        const startX = obj.chunk[0] * CHUNK_WIDTH + obj.coords[0];
+        const startY = obj.chunk[1] * CHUNK_HEIGHT + obj.coords[1];
+        const endX = startX + width;
+        const endY = startY + height;
 
-        const overlayCanvas = new OffscreenCanvas(1000, 1000);
-        const overlayCtx = overlayCanvas.getContext("2d");
-        overlayCtx.drawImage(img, obj.coords[0], obj.coords[1], width, height);
-        obj.imageData = overlayCtx.getImageData(0, 0, 1000, 1000);
+        const chunkStartX = Math.floor(startX / CHUNK_WIDTH);
+        const chunkStartY = Math.floor(startY / CHUNK_HEIGHT);
+        const chunkEndX = Math.floor((endX - 1) / CHUNK_WIDTH);
+        const chunkEndY = Math.floor((endY - 1) / CHUNK_HEIGHT);
+
+        const sourceCanvas = new OffscreenCanvas(width, height);
+        const sourceCtx = sourceCanvas.getContext("2d");
+        sourceCtx.drawImage(img, 0, 0, width, height);
+
+        for (let cx = chunkStartX; cx <= chunkEndX; cx++) {
+            for (let cy = chunkStartY; cy <= chunkEndY; cy++) {
+                const chunkOffsetX = cx * CHUNK_WIDTH;
+                const chunkOffsetY = cy * CHUNK_HEIGHT;
+
+                const overlayCanvas = new OffscreenCanvas(CHUNK_WIDTH, CHUNK_HEIGHT);
+                const overlayCtx = overlayCanvas.getContext("2d");
+
+                const dx = startX - chunkOffsetX;
+                const dy = startY - chunkOffsetY;
+
+                overlayCtx.drawImage(sourceCanvas, dx, dy);
+                const imageData = overlayCtx.getImageData(0, 0, CHUNK_WIDTH, CHUNK_HEIGHT);
+
+                overlays.push({
+                    chunk: [cx, cy],
+                    chunksString: `/${cx}/${cy}.png`,
+                    imageData
+                });
+            }
+        }
     }
 
     const OVERLAY_MODES = ["overlay", "original", "chunks"];
@@ -35,8 +65,8 @@
     fetch = new Proxy(fetch, {
         apply: async (target, thisArg, argList) => {
             const urlString = typeof argList[0] === "object" ? argList[0].url : argList[0];
-
             let url;
+
             try {
                 url = new URL(urlString);
             } catch (e) {
@@ -58,24 +88,14 @@
 
                             ctx.drawImage(originalImage, 0, 0, width, height);
                             const originalData = ctx.getImageData(0, 0, width, height);
-
                             const resultData = ctx.getImageData(0, 0, width, height);
                             const d1 = originalData.data;
                             const d2 = obj.imageData.data;
                             const dr = resultData.data;
 
                             for (let i = 0; i < d1.length; i += 4) {
-                                const isTransparent =
-                                      d2[i] === 0 &&
-                                      d2[i + 1] === 0 &&
-                                      d2[i + 2] === 0 &&
-                                      d2[i + 3] === 0;
-
-                                const samePixel =
-                                      d1[i] === d2[i] &&
-                                      d1[i + 1] === d2[i + 1] &&
-                                      d1[i + 2] === d2[i + 2] &&
-                                      d1[i + 3] === d2[i + 3];
+                                const isTransparent = d2[i] === 0 && d2[i + 1] === 0 && d2[i + 2] === 0 && d2[i + 3] === 0;
+                                const samePixel = d1[i] === d2[i] && d1[i + 1] === d2[i + 1] && d1[i + 2] === d2[i + 2] && d1[i + 3] === d2[i + 3];
 
                                 if (samePixel && !isTransparent) {
                                     dr[i] = 0;
@@ -101,8 +121,8 @@
                 }
             } else if (overlayMode === "chunks") {
                 if (url.hostname === "backend.wplace.live" && url.pathname.startsWith("/files/")) {
-                    const parts = url.pathname.split("/")
-                    const [chunk1, chunk2] = [parts.at(-2), parts.at(-1).split(".")[0]]
+                    const parts = url.pathname.split("/");
+                    const [chunk1, chunk2] = [parts.at(-2), parts.at(-1).split(".")[0]];
 
                     const canvas = new OffscreenCanvas(CHUNK_WIDTH, CHUNK_HEIGHT);
                     const ctx = canvas.getContext("2d", { willReadFrequently: true });
@@ -160,9 +180,8 @@
     }
 
     function patchUI() {
-        if (document.getElementById("overlay-blend-button")) {
-            return;
-        }
+        if (document.getElementById("overlay-blend-button")) return;
+
         let blendButton = document.createElement("button");
         blendButton.id = "overlay-blend-button";
         blendButton.textContent = overlayMode.charAt(0).toUpperCase() + overlayMode.slice(1);
@@ -188,6 +207,7 @@
             buttonContainer.classList.remove("items-center");
             buttonContainer.classList.add("items-end");
         }
+
         if (leftSidebar) {
             leftSidebar.classList.add("items-end");
             leftSidebar.classList.remove("items-center");

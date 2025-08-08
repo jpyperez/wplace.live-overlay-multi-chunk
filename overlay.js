@@ -8,6 +8,8 @@
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=zarystore.net
 // @license      MIT
 // @grant        none
+// @updateURL    https://raw.githubusercontent.com/ZaryImortal/wplace.live-overlay-multi-chunck/refs/heads/main/overlay.js
+// @downloadURL  https://raw.githubusercontent.com/ZaryImortal/wplace.live-overlay-multi-chunck/refs/heads/main/overlay.js
 // ==/UserScript==
 
 (async function () {

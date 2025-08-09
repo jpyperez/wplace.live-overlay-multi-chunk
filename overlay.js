@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Wplace Overlay Multi-chunk By Zary
+// @name         Wplace Overlay Multi-chunk By Zary + HUD Melhorada com Reset e Resize
 // @namespace    http://tampermonkey.net/
-// @version      0.4.0
-// @description  Overlay multi-chunk para Wplace.live com HUD de progresso arrastável e minimizável
+// @version      0.5.0
+// @description  Overlay multi-chunk para Wplace.live com HUD de progresso arrastável, minimizável e redimensionável
 // @author       llucarius & Zary & ChatGPT
 // @match        https://wplace.live/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=zarystore.net
@@ -21,8 +21,14 @@
     const overlaysRaw = await fetchData();
     const overlays = [];
 
-    // Armazena progresso por chunk: { greenPixels, totalOverlayPixels, missingColorsCount }
-    const overlayProgress = {};
+    // Progresso do overlay atual
+    let overlayProgress = {};
+
+    // Função para resetar progresso quando mudar overlayMode
+    function resetProgress() {
+        overlayProgress = {};
+        updateHUD();
+    }
 
     for (const obj of overlaysRaw) {
         const { img, width, height } = await loadImage(obj.url);
@@ -49,7 +55,6 @@
                 const overlayCanvas = new OffscreenCanvas(CHUNK_WIDTH, CHUNK_HEIGHT);
                 const overlayCtx = overlayCanvas.getContext("2d");
 
-                // Ajusta interseção da imagem com chunk
                 const sx = Math.max(0, chunkOffsetX - startX);
                 const sy = Math.max(0, chunkOffsetY - startY);
                 const sw = Math.min(width - sx, CHUNK_WIDTH);
@@ -72,7 +77,7 @@
     const OVERLAY_MODES = ["overlay", "original", "chunks"];
     let overlayMode = OVERLAY_MODES[0];
 
-    // HUD: container principal
+    // HUD container
     const hud = document.createElement("div");
     hud.style.position = "fixed";
     hud.style.top = "10px";
@@ -84,16 +89,19 @@
     hud.style.fontFamily = "monospace, monospace";
     hud.style.fontSize = "13px";
     hud.style.borderRadius = "8px";
-    hud.style.maxWidth = "320px";
     hud.style.maxHeight = "400px";
     hud.style.overflowY = "auto";
     hud.style.userSelect = "none";
     hud.style.cursor = "move";
     hud.style.display = "none";
     hud.style.boxShadow = "0 0 8px rgba(0,255,0,0.7)";
+    hud.style.width = "280px"; // largura inicial padrão
+    hud.style.minWidth = "150px";
+    hud.style.minHeight = "80px";
+    hud.style.resize = "both"; // habilita redimensionamento
     document.body.appendChild(hud);
 
-    // Cabeçalho com título e botão minimizar
+    // Cabeçalho HUD
     const hudHeader = document.createElement("div");
     hudHeader.style.display = "flex";
     hudHeader.style.justifyContent = "space-between";
@@ -115,9 +123,9 @@
     minimizeBtn.style.fontSize = "18px";
     minimizeBtn.style.cursor = "pointer";
     minimizeBtn.style.userSelect = "none";
+    minimizeBtn.style.marginLeft = "10px"; // espaçamento maior do texto
     hudHeader.appendChild(minimizeBtn);
 
-    // Container do conteúdo
     const hudContent = document.createElement("pre");
     hudContent.style.margin = 0;
     hudContent.style.whiteSpace = "pre-wrap";
@@ -130,7 +138,6 @@
         minimizeBtn.textContent = hudMinimized ? "+" : "–";
     };
 
-    // Função que cria quadradinho colorido
     function createColorBox(color) {
         const box = document.createElement("span");
         box.style.display = "inline-block";
@@ -144,7 +151,6 @@
         return box;
     }
 
-    // Atualiza HUD com dados de overlayProgress
     function updateHUD() {
         if (overlayMode !== "overlay") {
             hud.style.display = "none";
@@ -152,9 +158,9 @@
         }
         hud.style.display = "block";
 
-        let totalGreenPixels = 0;      // Pixels iguais = verde
-        let totalOverlayPixels = 0;    // Pixels coloridos do overlay
-        const missingColorsCount = {}; // Cor => qtd faltando
+        let totalGreenPixels = 0;
+        let totalOverlayPixels = 0;
+        const missingColorsCount = {};
 
         for (const key in overlayProgress) {
             const { greenPixels, totalOverlayPixels: chunkOverlayPixels, missingColorsCount: chunkColors } = overlayProgress[key];
@@ -172,15 +178,13 @@
 
         const missingPixels = totalOverlayPixels - totalGreenPixels;
 
-        let text = `Pixels faltando: ${missingPixels}\nProgresso: ${percent}%\n\nCores faltando:\n`;
-
-        hudContent.innerHTML = ''; // limpa conteúdo
+        hudContent.innerHTML = '';
 
         if (missingPixels === 0) {
             hudContent.textContent = "✔️ Completo!";
         } else {
+            const text = `Pixels Totais: ${totalOverlayPixels.toLocaleString()}\nPixels Faltando: ${missingPixels}\nProgresso: ${percent}%\n\nCores Faltando:\n`;
             hudContent.textContent = text;
-            // Adiciona as cores com quadradinhos
             for (const [color, count] of Object.entries(missingColorsCount).sort((a,b) => b[1] - a[1])) {
                 const line = document.createElement("div");
                 const box = createColorBox(color);
@@ -191,7 +195,9 @@
         }
     }
 
-    // Converte RGBA para rgba() CSS
+    // Atualiza HUD a cada 30 segundos
+    setInterval(updateHUD, 30000);
+
     function rgbaToCss(r, g, b, a) {
         return `rgba(${r},${g},${b},${a/255})`;
     }
@@ -240,7 +246,6 @@
                                     d1[i + 3] === d2[i + 3];
 
                                 if (samePixel && !isTransparent) {
-                                    // Marca pixel verde (0,255,0,255)
                                     dr[i] = 0;
                                     dr[i + 1] = 255;
                                     dr[i + 2] = 0;
@@ -254,18 +259,14 @@
                                     dr[i + 3] = d2[i + 3];
 
                                     totalOverlayPixels++;
-                                    // Conta cor que falta
                                     const rgbaColor = rgbaToCss(d2[i], d2[i + 1], d2[i + 2], d2[i + 3]);
                                     missingColorsCount[rgbaColor] = (missingColorsCount[rgbaColor] || 0) + 1;
-                                } else {
-                                    // Transparente, não conta
                                 }
                             }
 
                             ctx.putImageData(resultData, 0, 0);
                             const mergedBlob = await canvas.convertToBlob();
 
-                            // Atualiza progresso do chunk para HUD
                             overlayProgress[obj.chunksString.slice(1, -4)] = { greenPixels, totalOverlayPixels, missingColorsCount };
                             updateHUD();
 
@@ -353,7 +354,7 @@
         blendButton.addEventListener("click", () => {
             overlayMode = OVERLAY_MODES[(OVERLAY_MODES.indexOf(overlayMode) + 1) % OVERLAY_MODES.length];
             blendButton.textContent = overlayMode.charAt(0).toUpperCase() + overlayMode.slice(1);
-            updateHUD();
+            resetProgress();
         });
 
         const buttonContainer = document.querySelector("div.gap-4:nth-child(1) > div:nth-child(2)");
@@ -371,13 +372,14 @@
         }
     }
 
-    // Permite arrastar a HUD pela área do container todo
+    // Arrastar HUD
     hudHeader.style.cursor = "move";
     let isDragging = false;
     let dragOffsetX = 0;
     let dragOffsetY = 0;
 
     hudHeader.addEventListener("mousedown", (e) => {
+        if (e.target === minimizeBtn) return; // evita conflito com botão
         isDragging = true;
         dragOffsetX = e.clientX - hud.getBoundingClientRect().left;
         dragOffsetY = e.clientY - hud.getBoundingClientRect().top;
@@ -391,7 +393,6 @@
         if (!isDragging) return;
         let x = e.clientX - dragOffsetX;
         let y = e.clientY - dragOffsetY;
-        // Evitar que a HUD saia totalmente da tela
         const maxX = window.innerWidth - hud.offsetWidth - 10;
         const maxY = window.innerHeight - hud.offsetHeight - 10;
         x = Math.min(Math.max(10, x), maxX);

@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Wplace Overlay Multi-chunk By Zary
 // @namespace    http://tampermonkey.net/
-// @version      0.2.0
-// @description  Overlay multi-chunk para Wplace.live
+// @version      0.4.0
+// @description  Overlay multi-chunk para Wplace.live com HUD de progresso arrastável e minimizável
 // @author       llucarius & Zary & ChatGPT
 // @match        https://wplace.live/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=zarystore.net
@@ -20,6 +20,9 @@
 
     const overlaysRaw = await fetchData();
     const overlays = [];
+
+    // Armazena progresso por chunk: { greenPixels, totalOverlayPixels, missingColorsCount }
+    const overlayProgress = {};
 
     for (const obj of overlaysRaw) {
         const { img, width, height } = await loadImage(obj.url);
@@ -46,16 +49,21 @@
                 const overlayCanvas = new OffscreenCanvas(CHUNK_WIDTH, CHUNK_HEIGHT);
                 const overlayCtx = overlayCanvas.getContext("2d");
 
-                const dx = startX - chunkOffsetX;
-                const dy = startY - chunkOffsetY;
+                // Ajusta interseção da imagem com chunk
+                const sx = Math.max(0, chunkOffsetX - startX);
+                const sy = Math.max(0, chunkOffsetY - startY);
+                const sw = Math.min(width - sx, CHUNK_WIDTH);
+                const sh = Math.min(height - sy, CHUNK_HEIGHT);
+                const dx = Math.max(0, startX - chunkOffsetX);
+                const dy = Math.max(0, startY - chunkOffsetY);
 
-                overlayCtx.drawImage(sourceCanvas, dx, dy);
-                const imageData = overlayCtx.getImageData(0, 0, CHUNK_WIDTH, CHUNK_HEIGHT);
+                overlayCtx.clearRect(0, 0, CHUNK_WIDTH, CHUNK_HEIGHT);
+                overlayCtx.drawImage(sourceCanvas, sx, sy, sw, sh, dx, dy, sw, sh);
 
                 overlays.push({
                     chunk: [cx, cy],
                     chunksString: `/${cx}/${cy}.png`,
-                    imageData
+                    imageData: overlayCtx.getImageData(0, 0, CHUNK_WIDTH, CHUNK_HEIGHT)
                 });
             }
         }
@@ -63,6 +71,130 @@
 
     const OVERLAY_MODES = ["overlay", "original", "chunks"];
     let overlayMode = OVERLAY_MODES[0];
+
+    // HUD: container principal
+    const hud = document.createElement("div");
+    hud.style.position = "fixed";
+    hud.style.top = "10px";
+    hud.style.right = "10px";
+    hud.style.zIndex = 99999;
+    hud.style.backgroundColor = "rgba(0,0,0,0.75)";
+    hud.style.color = "white";
+    hud.style.padding = "10px";
+    hud.style.fontFamily = "monospace, monospace";
+    hud.style.fontSize = "13px";
+    hud.style.borderRadius = "8px";
+    hud.style.maxWidth = "320px";
+    hud.style.maxHeight = "400px";
+    hud.style.overflowY = "auto";
+    hud.style.userSelect = "none";
+    hud.style.cursor = "move";
+    hud.style.display = "none";
+    hud.style.boxShadow = "0 0 8px rgba(0,255,0,0.7)";
+    document.body.appendChild(hud);
+
+    // Cabeçalho com título e botão minimizar
+    const hudHeader = document.createElement("div");
+    hudHeader.style.display = "flex";
+    hudHeader.style.justifyContent = "space-between";
+    hudHeader.style.alignItems = "center";
+    hudHeader.style.marginBottom = "6px";
+    hud.appendChild(hudHeader);
+
+    const hudTitle = document.createElement("div");
+    hudTitle.textContent = "Overlay HUD";
+    hudTitle.style.fontWeight = "bold";
+    hudHeader.appendChild(hudTitle);
+
+    const minimizeBtn = document.createElement("button");
+    minimizeBtn.textContent = "–";
+    minimizeBtn.title = "Minimizar/Restaurar HUD";
+    minimizeBtn.style.background = "transparent";
+    minimizeBtn.style.color = "white";
+    minimizeBtn.style.border = "none";
+    minimizeBtn.style.fontSize = "18px";
+    minimizeBtn.style.cursor = "pointer";
+    minimizeBtn.style.userSelect = "none";
+    hudHeader.appendChild(minimizeBtn);
+
+    // Container do conteúdo
+    const hudContent = document.createElement("pre");
+    hudContent.style.margin = 0;
+    hudContent.style.whiteSpace = "pre-wrap";
+    hud.appendChild(hudContent);
+
+    let hudMinimized = false;
+    minimizeBtn.onclick = () => {
+        hudMinimized = !hudMinimized;
+        hudContent.style.display = hudMinimized ? "none" : "block";
+        minimizeBtn.textContent = hudMinimized ? "+" : "–";
+    };
+
+    // Função que cria quadradinho colorido
+    function createColorBox(color) {
+        const box = document.createElement("span");
+        box.style.display = "inline-block";
+        box.style.width = "14px";
+        box.style.height = "14px";
+        box.style.backgroundColor = color;
+        box.style.border = "1px solid #aaa";
+        box.style.marginRight = "6px";
+        box.style.verticalAlign = "middle";
+        box.style.borderRadius = "3px";
+        return box;
+    }
+
+    // Atualiza HUD com dados de overlayProgress
+    function updateHUD() {
+        if (overlayMode !== "overlay") {
+            hud.style.display = "none";
+            return;
+        }
+        hud.style.display = "block";
+
+        let totalGreenPixels = 0;      // Pixels iguais = verde
+        let totalOverlayPixels = 0;    // Pixels coloridos do overlay
+        const missingColorsCount = {}; // Cor => qtd faltando
+
+        for (const key in overlayProgress) {
+            const { greenPixels, totalOverlayPixels: chunkOverlayPixels, missingColorsCount: chunkColors } = overlayProgress[key];
+            totalGreenPixels += greenPixels;
+            totalOverlayPixels += chunkOverlayPixels;
+
+            for (const color in chunkColors) {
+                missingColorsCount[color] = (missingColorsCount[color] || 0) + chunkColors[color];
+            }
+        }
+
+        const percent = totalOverlayPixels
+            ? ((totalGreenPixels / totalOverlayPixels) * 100).toFixed(2)
+            : "0.00";
+
+        const missingPixels = totalOverlayPixels - totalGreenPixels;
+
+        let text = `Pixels faltando: ${missingPixels}\nProgresso: ${percent}%\n\nCores faltando:\n`;
+
+        hudContent.innerHTML = ''; // limpa conteúdo
+
+        if (missingPixels === 0) {
+            hudContent.textContent = "✔️ Completo!";
+        } else {
+            hudContent.textContent = text;
+            // Adiciona as cores com quadradinhos
+            for (const [color, count] of Object.entries(missingColorsCount).sort((a,b) => b[1] - a[1])) {
+                const line = document.createElement("div");
+                const box = createColorBox(color);
+                line.appendChild(box);
+                line.appendChild(document.createTextNode(count));
+                hudContent.appendChild(line);
+            }
+        }
+    }
+
+    // Converte RGBA para rgba() CSS
+    function rgbaToCss(r, g, b, a) {
+        return `rgba(${r},${g},${b},${a/255})`;
+    }
 
     fetch = new Proxy(fetch, {
         apply: async (target, thisArg, argList) => {
@@ -95,25 +227,47 @@
                             const d2 = obj.imageData.data;
                             const dr = resultData.data;
 
+                            let greenPixels = 0;
+                            let totalOverlayPixels = 0;
+                            const missingColorsCount = {};
+
                             for (let i = 0; i < d1.length; i += 4) {
                                 const isTransparent = d2[i] === 0 && d2[i + 1] === 0 && d2[i + 2] === 0 && d2[i + 3] === 0;
-                                const samePixel = d1[i] === d2[i] && d1[i + 1] === d2[i + 1] && d1[i + 2] === d2[i + 2] && d1[i + 3] === d2[i + 3];
+                                const samePixel =
+                                    d1[i] === d2[i] &&
+                                    d1[i + 1] === d2[i + 1] &&
+                                    d1[i + 2] === d2[i + 2] &&
+                                    d1[i + 3] === d2[i + 3];
 
                                 if (samePixel && !isTransparent) {
+                                    // Marca pixel verde (0,255,0,255)
                                     dr[i] = 0;
                                     dr[i + 1] = 255;
                                     dr[i + 2] = 0;
                                     dr[i + 3] = 255;
+                                    greenPixels++;
+                                    totalOverlayPixels++;
                                 } else if (!isTransparent) {
                                     dr[i] = d2[i];
                                     dr[i + 1] = d2[i + 1];
                                     dr[i + 2] = d2[i + 2];
                                     dr[i + 3] = d2[i + 3];
+
+                                    totalOverlayPixels++;
+                                    // Conta cor que falta
+                                    const rgbaColor = rgbaToCss(d2[i], d2[i + 1], d2[i + 2], d2[i + 3]);
+                                    missingColorsCount[rgbaColor] = (missingColorsCount[rgbaColor] || 0) + 1;
+                                } else {
+                                    // Transparente, não conta
                                 }
                             }
 
                             ctx.putImageData(resultData, 0, 0);
                             const mergedBlob = await canvas.convertToBlob();
+
+                            // Atualiza progresso do chunk para HUD
+                            overlayProgress[obj.chunksString.slice(1, -4)] = { greenPixels, totalOverlayPixels, missingColorsCount };
+                            updateHUD();
 
                             return new Response(mergedBlob, {
                                 headers: { "Content-Type": "image/png" }
@@ -198,7 +352,8 @@
 
         blendButton.addEventListener("click", () => {
             overlayMode = OVERLAY_MODES[(OVERLAY_MODES.indexOf(overlayMode) + 1) % OVERLAY_MODES.length];
-            blendButton.textContent = `${overlayMode.charAt(0).toUpperCase() + overlayMode.slice(1)}`;
+            blendButton.textContent = overlayMode.charAt(0).toUpperCase() + overlayMode.slice(1);
+            updateHUD();
         });
 
         const buttonContainer = document.querySelector("div.gap-4:nth-child(1) > div:nth-child(2)");
@@ -216,6 +371,37 @@
         }
     }
 
+    // Permite arrastar a HUD pela área do container todo
+    hudHeader.style.cursor = "move";
+    let isDragging = false;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
+
+    hudHeader.addEventListener("mousedown", (e) => {
+        isDragging = true;
+        dragOffsetX = e.clientX - hud.getBoundingClientRect().left;
+        dragOffsetY = e.clientY - hud.getBoundingClientRect().top;
+        document.body.style.userSelect = "none";
+    });
+    window.addEventListener("mouseup", () => {
+        isDragging = false;
+        document.body.style.userSelect = "";
+    });
+    window.addEventListener("mousemove", (e) => {
+        if (!isDragging) return;
+        let x = e.clientX - dragOffsetX;
+        let y = e.clientY - dragOffsetY;
+        // Evitar que a HUD saia totalmente da tela
+        const maxX = window.innerWidth - hud.offsetWidth - 10;
+        const maxY = window.innerHeight - hud.offsetHeight - 10;
+        x = Math.min(Math.max(10, x), maxX);
+        y = Math.min(Math.max(10, y), maxY);
+        hud.style.left = x + "px";
+        hud.style.top = y + "px";
+        hud.style.right = "auto";
+        hud.style.bottom = "auto";
+    });
+
     const observer = new MutationObserver(() => {
         patchUI();
     });
@@ -226,4 +412,5 @@
     });
 
     patchUI();
+
 })();

@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Wplace Overlay Multi-chunk By Zary
+// @name         Wplace Overlay Multi-chunk By Zary + HUD
 // @namespace    http://tampermonkey.net/
-// @version      0.5.5
-// @description  Overlay multi-chunk para Wplace.live com HUD e seletor de overlay
+// @version      0.5.6
+// @description  Overlay multi-chunk para Wplace.live com HUD e seletor de overlay externo
 // @author       llucarius & Zary & ChatGPT
 // @match        https://wplace.live/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=zarystore.net
@@ -352,80 +352,82 @@
     }
 
     function patchUI() {
-        if (document.getElementById("overlay-blend-button")) return;
-
-        let blendButton = document.createElement("button");
-        blendButton.id = "overlay-blend-button";
-        blendButton.textContent = overlayMode.charAt(0).toUpperCase() + overlayMode.slice(1);
-        blendButton.style.backgroundColor = "#0e0e0e7f";
-        blendButton.style.color = "white";
-        blendButton.style.border = "solid";
-        blendButton.style.borderColor = "#1d1d1d7f";
-        blendButton.style.borderRadius = "4px";
-        blendButton.style.padding = "5px 10px";
-        blendButton.style.cursor = "pointer";
-        blendButton.style.backdropFilter = "blur(2px)";
-
-        blendButton.addEventListener("click", () => {
-            overlayMode = OVERLAY_MODES[(OVERLAY_MODES.indexOf(overlayMode) + 1) % OVERLAY_MODES.length];
-            blendButton.textContent = overlayMode.charAt(0).toUpperCase() + overlayMode.slice(1);
-            resetProgress();
-            updateHUD();
-        });
+        // Remove o early return, sempre tenta criar se não existir
 
         const buttonContainer = document.querySelector("div.gap-4:nth-child(1) > div:nth-child(2)");
-        const leftSidebar = document.querySelector("html body div div.disable-pinch-zoom.relative.h-full.overflow-hidden.svelte-6wmtgk div.absolute.right-2.top-2.z-30 div.flex.flex-col.gap-4.items-center");
+        if (!buttonContainer) return;
 
-        if (buttonContainer) {
+        // Botão blend
+        let blendButton = document.getElementById("overlay-blend-button");
+        if (!blendButton) {
+            blendButton = document.createElement("button");
+            blendButton.id = "overlay-blend-button";
+            blendButton.textContent = overlayMode.charAt(0).toUpperCase() + overlayMode.slice(1);
+            blendButton.style.backgroundColor = "#0e0e0e7f";
+            blendButton.style.color = "white";
+            blendButton.style.border = "solid";
+            blendButton.style.borderColor = "#1d1d1d7f";
+            blendButton.style.borderRadius = "4px";
+            blendButton.style.padding = "5px 10px";
+            blendButton.style.cursor = "pointer";
+            blendButton.style.backdropFilter = "blur(2px)";
+
+            blendButton.addEventListener("click", () => {
+                overlayMode = OVERLAY_MODES[(OVERLAY_MODES.indexOf(overlayMode) + 1) % OVERLAY_MODES.length];
+                blendButton.textContent = overlayMode.charAt(0).toUpperCase() + overlayMode.slice(1);
+                resetProgress();
+                updateHUD();
+            });
+
             buttonContainer.appendChild(blendButton);
+
+            // Ajusta classes container
             buttonContainer.classList.remove("items-center");
             buttonContainer.classList.add("items-end");
-
-            // Cria o seletor de overlay logo abaixo do botão
-            if (!document.getElementById("overlay-selector")) {
-                const overlaySelector = document.createElement("select");
-                overlaySelector.id = "overlay-selector";
-                overlaySelector.style.marginTop = "6px";
-                overlaySelector.style.padding = "4px 6px";
-                overlaySelector.style.backgroundColor = "#222";
-                overlaySelector.style.color = "white";
-                overlaySelector.style.border = "none";
-                overlaySelector.style.borderRadius = "4px";
-                overlaySelector.style.fontSize = "13px";
-                overlaySelector.title = "Selecione o overlay";
-
-                // Opção padrão "Nenhum"
-                const noneOption = document.createElement("option");
-                noneOption.value = "";
-                noneOption.textContent = "Nenhum overlay";
-                overlaySelector.appendChild(noneOption);
-
-                overlaysRaw.forEach((overlay, idx) => {
-                    const opt = document.createElement("option");
-                    opt.value = idx;
-                    const name = overlayNames[idx] ?? `Overlay #${idx + 1}`;
-                    opt.textContent = name;
-                    overlaySelector.appendChild(opt);
-                });
-
-                overlaySelector.addEventListener("change", (e) => {
-                    const val = e.target.value;
-                    if (val === "") {
-                        currentOverlayId = null;
-                    } else {
-                        currentOverlayId = Number(val);
-                    }
-                    resetProgress();
-                    updateHUD();
-                });
-
-                buttonContainer.appendChild(overlaySelector);
-            }
         }
 
-        if (leftSidebar) {
-            leftSidebar.classList.add("items-end");
-            leftSidebar.classList.remove("items-center");
+        // Seletor de overlay
+        let overlaySelector = document.getElementById("overlay-selector");
+        if (!overlaySelector) {
+            overlaySelector = document.createElement("select");
+            overlaySelector.id = "overlay-selector";
+            overlaySelector.style.marginTop = "6px";
+            overlaySelector.style.padding = "4px 6px";
+            overlaySelector.style.backgroundColor = "#222";
+            overlaySelector.style.color = "white";
+            overlaySelector.style.border = "none";
+            overlaySelector.style.borderRadius = "4px";
+            overlaySelector.style.fontSize = "13px";
+            overlaySelector.title = "Selecione o overlay";
+
+            // Opção padrão "Nenhum"
+            const noneOption = document.createElement("option");
+            noneOption.value = "";
+            noneOption.textContent = "Nenhum overlay";
+            overlaySelector.appendChild(noneOption);
+
+            overlaysRaw.forEach((overlay, idx) => {
+                const opt = document.createElement("option");
+                opt.value = idx;
+                const name = overlayNames[idx] ?? `Overlay #${idx + 1}`;
+                opt.textContent = name;
+                overlaySelector.appendChild(opt);
+            });
+
+            overlaySelector.value = currentOverlayId !== null ? currentOverlayId : "";
+
+            overlaySelector.addEventListener("change", (e) => {
+                const val = e.target.value;
+                if (val === "") {
+                    currentOverlayId = null;
+                } else {
+                    currentOverlayId = Number(val);
+                }
+                resetProgress();
+                updateHUD();
+            });
+
+            buttonContainer.appendChild(overlaySelector);
         }
     }
 
@@ -454,6 +456,15 @@
             hud.style.top = (e.clientY - dragOffsetY) + "px";
         }
     });
+
+    // Observa o container para reaplicar patchUI quando for removido ou alterado (ex: repaint)
+    const targetNode = document.querySelector("div.gap-4:nth-child(1)");
+    if (targetNode) {
+        const observer = new MutationObserver(() => {
+            patchUI();
+        });
+        observer.observe(targetNode, { childList: true, subtree: true });
+    }
 
     patchUI();
 

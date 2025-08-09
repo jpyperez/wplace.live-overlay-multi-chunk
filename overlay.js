@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Wplace Overlay Multi-chunk By Zary + HUD Melhorada com Reset e Resize
+// @name         Wplace Overlay Multi-chunk By Zary
 // @namespace    http://tampermonkey.net/
-// @version      0.5.0
-// @description  Overlay multi-chunk para Wplace.live com HUD de progresso arrastável, minimizável e redimensionável
+// @version      0.5.5
+// @description  Overlay multi-chunk para Wplace.live com HUD e seletor de overlay
 // @author       llucarius & Zary & ChatGPT
 // @match        https://wplace.live/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=zarystore.net
@@ -21,10 +21,15 @@
     const overlaysRaw = await fetchData();
     const overlays = [];
 
-    // Progresso do overlay atual
+    let currentOverlayId = null;
     let overlayProgress = {};
 
-    // Função para resetar progresso quando mudar overlayMode
+    const overlayNames = [
+        "Onça",
+        "Pardo Moggada",
+        "Evil Morty"
+    ];
+
     function resetProgress() {
         overlayProgress = {};
         updateHUD();
@@ -77,10 +82,10 @@
     const OVERLAY_MODES = ["overlay", "original", "chunks"];
     let overlayMode = OVERLAY_MODES[0];
 
-    // HUD container
+    // HUD container (sem seletor dentro)
     const hud = document.createElement("div");
     hud.style.position = "fixed";
-    hud.style.top = "10px";
+    hud.style.top = "50px";
     hud.style.right = "10px";
     hud.style.zIndex = 99999;
     hud.style.backgroundColor = "rgba(0,0,0,0.75)";
@@ -93,12 +98,11 @@
     hud.style.overflowY = "auto";
     hud.style.userSelect = "none";
     hud.style.cursor = "move";
-    hud.style.display = "none";
     hud.style.boxShadow = "0 0 8px rgba(0,255,0,0.7)";
-    hud.style.width = "280px"; // largura inicial padrão
+    hud.style.width = "280px";
     hud.style.minWidth = "150px";
     hud.style.minHeight = "80px";
-    hud.style.resize = "both"; // habilita redimensionamento
+    hud.style.resize = "both";
     document.body.appendChild(hud);
 
     // Cabeçalho HUD
@@ -123,7 +127,7 @@
     minimizeBtn.style.fontSize = "18px";
     minimizeBtn.style.cursor = "pointer";
     minimizeBtn.style.userSelect = "none";
-    minimizeBtn.style.marginLeft = "10px"; // espaçamento maior do texto
+    minimizeBtn.style.marginLeft = "10px";
     hudHeader.appendChild(minimizeBtn);
 
     const hudContent = document.createElement("pre");
@@ -152,7 +156,7 @@
     }
 
     function updateHUD() {
-        if (overlayMode !== "overlay") {
+        if (overlayMode !== "overlay" || currentOverlayId === null) {
             hud.style.display = "none";
             return;
         }
@@ -183,13 +187,13 @@
         if (missingPixels === 0) {
             hudContent.textContent = "✔️ Completo!";
         } else {
-            const text = `Pixels Totais: ${totalOverlayPixels.toLocaleString()}\nPixels Faltando: ${missingPixels}\nProgresso: ${percent}%\n\nCores Faltando:\n`;
+            const text = `Pixels Totais: ${totalOverlayPixels.toLocaleString()}\nPixels Faltando: ${missingPixels.toLocaleString()}\nProgresso: ${percent}%\n\nCores Faltando:\n`;
             hudContent.textContent = text;
             for (const [color, count] of Object.entries(missingColorsCount).sort((a,b) => b[1] - a[1])) {
                 const line = document.createElement("div");
                 const box = createColorBox(color);
                 line.appendChild(box);
-                line.appendChild(document.createTextNode(count));
+                line.appendChild(document.createTextNode(count.toLocaleString()));
                 hudContent.appendChild(line);
             }
         }
@@ -213,10 +217,21 @@
                 throw new Error("Invalid URL provided to fetch");
             }
 
-            if (overlayMode === "overlay") {
+            if (overlayMode === "overlay" && currentOverlayId !== null) {
                 if (url.hostname === "backend.wplace.live" && url.pathname.startsWith("/files/")) {
                     for (const obj of overlays) {
                         if (url.pathname.endsWith(obj.chunksString)) {
+                            const overlayObjIndex = overlaysRaw.findIndex(o => {
+                                const startX = o.chunk[0] * CHUNK_WIDTH + o.coords[0];
+                                const startY = o.chunk[1] * CHUNK_HEIGHT + o.coords[1];
+                                const endX = startX + obj.imageData.width;
+                                const endY = startY + obj.imageData.height;
+                                const overlayChunkString = `/${obj.chunk[0]}/${obj.chunk[1]}.png`;
+                                return overlayChunkString === obj.chunksString && overlaysRaw[currentOverlayId].chunk[0] === o.chunk[0] && overlaysRaw[currentOverlayId].chunk[1] === o.chunk[1];
+                            });
+
+                            if (overlayObjIndex !== currentOverlayId) continue;
+
                             const originalResponse = await target.apply(thisArg, argList);
                             const originalBlob = await originalResponse.blob();
                             const originalImage = await blobToImage(originalBlob);
@@ -306,9 +321,9 @@
         }
     });
 
-    async function fetchData() {
-        const response = await fetch("https://raw.githubusercontent.com/ZaryImortal/wplace.live-overlay-multi-chunck/refs/heads/main/imagens.js?" + Date.now());
-        return await response.json();
+    function fetchData() {
+        return fetch("https://raw.githubusercontent.com/ZaryImortal/wplace.live-overlay-multi-chunck/refs/heads/main/imagens.js?" + Date.now())
+            .then(res => res.json());
     }
 
     function blobToImage(blob) {
@@ -355,6 +370,7 @@
             overlayMode = OVERLAY_MODES[(OVERLAY_MODES.indexOf(overlayMode) + 1) % OVERLAY_MODES.length];
             blendButton.textContent = overlayMode.charAt(0).toUpperCase() + overlayMode.slice(1);
             resetProgress();
+            updateHUD();
         });
 
         const buttonContainer = document.querySelector("div.gap-4:nth-child(1) > div:nth-child(2)");
@@ -364,6 +380,47 @@
             buttonContainer.appendChild(blendButton);
             buttonContainer.classList.remove("items-center");
             buttonContainer.classList.add("items-end");
+
+            // Cria o seletor de overlay logo abaixo do botão
+            if (!document.getElementById("overlay-selector")) {
+                const overlaySelector = document.createElement("select");
+                overlaySelector.id = "overlay-selector";
+                overlaySelector.style.marginTop = "6px";
+                overlaySelector.style.padding = "4px 6px";
+                overlaySelector.style.backgroundColor = "#222";
+                overlaySelector.style.color = "white";
+                overlaySelector.style.border = "none";
+                overlaySelector.style.borderRadius = "4px";
+                overlaySelector.style.fontSize = "13px";
+                overlaySelector.title = "Selecione o overlay";
+
+                // Opção padrão "Nenhum"
+                const noneOption = document.createElement("option");
+                noneOption.value = "";
+                noneOption.textContent = "Nenhum overlay";
+                overlaySelector.appendChild(noneOption);
+
+                overlaysRaw.forEach((overlay, idx) => {
+                    const opt = document.createElement("option");
+                    opt.value = idx;
+                    const name = overlayNames[idx] ?? `Overlay #${idx + 1}`;
+                    opt.textContent = name;
+                    overlaySelector.appendChild(opt);
+                });
+
+                overlaySelector.addEventListener("change", (e) => {
+                    const val = e.target.value;
+                    if (val === "") {
+                        currentOverlayId = null;
+                    } else {
+                        currentOverlayId = Number(val);
+                    }
+                    resetProgress();
+                    updateHUD();
+                });
+
+                buttonContainer.appendChild(overlaySelector);
+            }
         }
 
         if (leftSidebar) {
@@ -379,37 +436,23 @@
     let dragOffsetY = 0;
 
     hudHeader.addEventListener("mousedown", (e) => {
-        if (e.target === minimizeBtn) return; // evita conflito com botão
+        if (e.target === minimizeBtn) return;
         isDragging = true;
         dragOffsetX = e.clientX - hud.getBoundingClientRect().left;
         dragOffsetY = e.clientY - hud.getBoundingClientRect().top;
         document.body.style.userSelect = "none";
     });
+
     window.addEventListener("mouseup", () => {
         isDragging = false;
         document.body.style.userSelect = "";
     });
+
     window.addEventListener("mousemove", (e) => {
-        if (!isDragging) return;
-        let x = e.clientX - dragOffsetX;
-        let y = e.clientY - dragOffsetY;
-        const maxX = window.innerWidth - hud.offsetWidth - 10;
-        const maxY = window.innerHeight - hud.offsetHeight - 10;
-        x = Math.min(Math.max(10, x), maxX);
-        y = Math.min(Math.max(10, y), maxY);
-        hud.style.left = x + "px";
-        hud.style.top = y + "px";
-        hud.style.right = "auto";
-        hud.style.bottom = "auto";
-    });
-
-    const observer = new MutationObserver(() => {
-        patchUI();
-    });
-
-    observer.observe(document.querySelector("div.gap-4:nth-child(1)"), {
-        childList: true,
-        subtree: true
+        if (isDragging) {
+            hud.style.left = (e.clientX - dragOffsetX) + "px";
+            hud.style.top = (e.clientY - dragOffsetY) + "px";
+        }
     });
 
     patchUI();

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wplace Overlay Multi-chunk By Zary + HUD
 // @namespace    http://tampermonkey.net/
-// @version      0.5.7
+// @version      0.5.8
 // @description  Overlay multi-chunk para Wplace.live com HUD e seletor de overlay externo
 // @author       llucarius & Zary & ChatGPT
 // @match        https://wplace.live/*
@@ -25,11 +25,11 @@
     let overlayProgress = {};
 
     const overlayNames = [
-        "Onça",
-        "Pardo Moggada",
-        "Evil Morty",
-        "EVE-StelarBlade",
-        "Onda Japonesa"
+        "Onça [1386, 2385]",
+        "Pardo Moggada [2063, 3072]",
+        "Evil Morty [2210, 1652]",
+        "EVE-StelarBlade [3218, 1820]",
+        "Onda Japonesa [3357, 2304]"
     ];
 
     function resetProgress() {

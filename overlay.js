@@ -434,10 +434,10 @@
     }
 
     // Botão "Ir para Overlay"
-    let goOverlayBtn = document.getElementById("go-overlay-btn");
+    let goOverlayBtn = document.getElementById("go-overlay-button");
     if (!goOverlayBtn) {
         goOverlayBtn = document.createElement("button");
-        goOverlayBtn.id = "go-overlay-btn";
+        goOverlayBtn.id = "go-overlay-button";
         goOverlayBtn.textContent = "Ir para Overlay";
         goOverlayBtn.style.marginTop = "6px";
         goOverlayBtn.style.padding = "5px 10px";
@@ -447,26 +447,23 @@
         goOverlayBtn.style.borderColor = "#1d1d1d7f";
         goOverlayBtn.style.borderRadius = "4px";
         goOverlayBtn.style.cursor = "pointer";
-        goOverlayBtn.style.backdropFilter = "blur(2px)";
-        goOverlayBtn.style.display = overlaySelector.value === "" ? "none" : "block";
+        goOverlayBtn.style.display = "none"; // inicialmente escondido
+        buttonContainer.appendChild(goOverlayBtn);
 
         goOverlayBtn.addEventListener("click", () => {
-            if (currentOverlayId !== null) {
-                const name = overlayNames[currentOverlayId] ?? "";
-                const match = name.match(/\?lat=.*?&lng=.*?\]?/);
-                if (match) {
-                    const link = "https://wplace.live/" + match[0];
-                    window.location.href = link; // redireciona para o overlay
-                } else {
-                    alert("Este overlay não tem coordenadas definidas!");
-                }
+            if (currentOverlayId === null) return;
+            const name = overlayNames[currentOverlayId];
+            const match = name.match(/\?lat=([-0-9.]+)&lng=([-0-9.]+)/);
+            if (match) {
+                const lat = match[1];
+                const lng = match[2];
+                const url = `https://wplace.live/?lat=${lat}&lng=${lng}`;
+                window.open(url, "_blank");
             }
         });
-
-        buttonContainer.appendChild(goOverlayBtn);
     }
 
-    // Atualiza visibilidade do botão quando muda o seletor
+    // Atualiza visibilidade do botão ao mudar o overlay
     overlaySelector.addEventListener("change", (e) => {
         const val = e.target.value;
         if (val === "") {
@@ -474,12 +471,11 @@
             goOverlayBtn.style.display = "none";
         } else {
             currentOverlayId = Number(val);
-            goOverlayBtn.style.display = "block";
+            goOverlayBtn.style.display = "inline-block";
         }
         resetProgress();
         updateHUD();
     });
-}
     
     // Arrastar HUD
     hudHeader.style.cursor = "move";

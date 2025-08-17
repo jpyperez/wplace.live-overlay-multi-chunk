@@ -2,7 +2,7 @@
 // @name         Wplace Overlay Multi-chunk By Zary + HUD
 // @namespace    http://tampermonkey.net/
 // @version      0.6.0
-// @description  Overlay multi-chunk para Wplace.live com HUD e seletor de overlay externo
+// @description  Overlay multi-chunk para Wplace.live com HUD, seletor de overlay e botão "Ir para Overlay"
 // @author       llucarius & Zary & ChatGPT
 // @match        https://wplace.live/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=zarystore.net
@@ -84,7 +84,7 @@
     const OVERLAY_MODES = ["overlay", "original", "chunks"];
     let overlayMode = OVERLAY_MODES[0];
 
-    // HUD container (sem seletor dentro)
+    // HUD container
     const hud = document.createElement("div");
     hud.style.position = "fixed";
     hud.style.top = "50px";
@@ -354,8 +354,6 @@
     }
 
     function patchUI() {
-        // Remove o early return, sempre tenta criar se não existir
-
         const buttonContainer = document.querySelector("div.gap-4:nth-child(1) > div:nth-child(2)");
         if (!buttonContainer) return;
 
@@ -383,7 +381,6 @@
 
             buttonContainer.appendChild(blendButton);
 
-            // Ajusta classes container
             buttonContainer.classList.remove("items-center");
             buttonContainer.classList.add("items-end");
         }
@@ -402,7 +399,6 @@
             overlaySelector.style.fontSize = "13px";
             overlaySelector.title = "Selecione o overlay";
 
-            // Opção padrão "Nenhum"
             const noneOption = document.createElement("option");
             noneOption.value = "";
             noneOption.textContent = "Nenhum overlay";
@@ -424,60 +420,45 @@
                     currentOverlayId = null;
                 } else {
                     currentOverlayId = Number(val);
+                    resetProgress();
+                    updateHUD();
+                    patchGoToOverlayButton();
                 }
-                resetProgress();
-                updateHUD();
             });
 
             buttonContainer.appendChild(overlaySelector);
         }
+
+        patchGoToOverlayButton();
     }
 
-    // Botão "Ir para Overlay"
-    let goOverlayBtn = document.getElementById("go-overlay-button");
-    if (!goOverlayBtn) {
-        goOverlayBtn = document.createElement("button");
-        goOverlayBtn.id = "go-overlay-button";
-        goOverlayBtn.textContent = "Ir para Overlay";
-        goOverlayBtn.style.marginTop = "6px";
-        goOverlayBtn.style.padding = "5px 10px";
-        goOverlayBtn.style.backgroundColor = "#0e0e0e7f";
-        goOverlayBtn.style.color = "white";
-        goOverlayBtn.style.border = "solid";
-        goOverlayBtn.style.borderColor = "#1d1d1d7f";
-        goOverlayBtn.style.borderRadius = "4px";
-        goOverlayBtn.style.cursor = "pointer";
-        goOverlayBtn.style.display = "none"; // inicialmente escondido
-        buttonContainer.appendChild(goOverlayBtn);
+    function patchGoToOverlayButton() {
+        let gotoButton = document.getElementById("goto-overlay-btn");
+        if (!gotoButton) {
+            gotoButton = document.createElement("button");
+            gotoButton.id = "goto-overlay-btn";
+            gotoButton.textContent = "Ir para Overlay";
+            gotoButton.style.marginLeft = "6px";
+            gotoButton.style.padding = "4px 8px";
+            gotoButton.style.borderRadius = "4px";
+            gotoButton.style.border = "none";
+            gotoButton.style.backgroundColor = "#0e0e0e7f";
+            gotoButton.style.color = "white";
+            gotoButton.style.cursor = "pointer";
+            document.querySelector("#overlay-selector").after(gotoButton);
 
-        goOverlayBtn.addEventListener("click", () => {
-            if (currentOverlayId === null) return;
-            const name = overlayNames[currentOverlayId];
-            const match = name.match(/\?lat=([-0-9.]+)&lng=([-0-9.]+)/);
-            if (match) {
-                const lat = match[1];
-                const lng = match[2];
-                const url = `https://wplace.live/?lat=${lat}&lng=${lng}`;
-                window.open(url, "_blank");
-            }
-        });
-    }
-
-    // Atualiza visibilidade do botão ao mudar o overlay
-    overlaySelector.addEventListener("change", (e) => {
-        const val = e.target.value;
-        if (val === "") {
-            currentOverlayId = null;
-            goOverlayBtn.style.display = "none";
-        } else {
-            currentOverlayId = Number(val);
-            goOverlayBtn.style.display = "inline-block";
+            gotoButton.addEventListener("click", () => {
+                if (currentOverlayId === null) return;
+                const overlayName = overlayNames[currentOverlayId];
+                const latMatch = overlayName.match(/lat=(-?\d+\.?\d*)/);
+                const lngMatch = overlayName.match(/lng=(-?\d+\.?\d*)/);
+                const lat = latMatch ? latMatch[1] : "0";
+                const lng = lngMatch ? lngMatch[1] : "0";
+                window.location.href = `https://wplace.live/?lat=${lat}&lng=${lng}`;
+            });
         }
-        resetProgress();
-        updateHUD();
-    });
-    
-    // Arrastar HUD
+    }
+
     hudHeader.style.cursor = "move";
     let isDragging = false;
     let dragOffsetX = 0;
@@ -503,7 +484,6 @@
         }
     });
 
-    // Observa o container para reaplicar patchUI quando for removido ou alterado (ex: repaint)
     const targetNode = document.querySelector("div.gap-4:nth-child(1)");
     if (targetNode) {
         const observer = new MutationObserver(() => {

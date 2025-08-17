@@ -25,11 +25,19 @@
     let overlayProgress = {};
 
     const overlayNames = [
-        "Onça [?lat=-23.62&lng=-46.86]",
-        "Pardo Moggada [?lat=-23.09&lng=-46.04]",
-        "Evil Morty [?lat=-24.15&lng=-46.01]",
-        "EVE-StelarBlade [?lat=36.34&lng=127.12]",
-        "Onda Japonesa [?lat=34.55&lng=139.10]"
+        "Onça",
+        "Pardo Moggada",
+        "Evil Morty",
+        "EVE-StelarBlade",
+        "Onda Japonesa"
+    ];
+
+    const overlayCoords = [
+        { lat: -23.62, lng: -46.86 },
+        { lat: -23.09, lng: -46.04 },
+        { lat: -24.15, lng: -46.01 },
+        { lat: 36.34, lng: 127.12 },
+        { lat: 34.55, lng: 139.10 }
     ];
 
     function resetProgress() {
@@ -449,12 +457,8 @@
 
             gotoButton.addEventListener("click", () => {
                 if (currentOverlayId === null) return;
-                const overlayName = overlayNames[currentOverlayId];
-                const latMatch = overlayName.match(/lat=(-?\d+\.?\d*)/);
-                const lngMatch = overlayName.match(/lng=(-?\d+\.?\d*)/);
-                const lat = latMatch ? latMatch[1] : "0";
-                const lng = lngMatch ? lngMatch[1] : "0";
-                window.location.href = `https://wplace.live/?lat=${lat}&lng=${lng}`;
+                const coords = overlayCoords[currentOverlayId] ?? { lat: 0, lng: 0 };
+                window.location.href = `https://wplace.live/?lat=${coords.lat}&lng=${coords.lng}`;
             });
         }
     }

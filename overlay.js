@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wplace Overlay Multi-chunk By Zary + HUD
 // @namespace    http://tampermonkey.net/
-// @version      0.5.9
+// @version      0.6.0
 // @description  Overlay multi-chunk para Wplace.live com HUD e seletor de overlay externo
 // @author       llucarius & Zary & ChatGPT
 // @match        https://wplace.live/*
@@ -433,6 +433,54 @@
         }
     }
 
+    // Botão "Ir para Overlay"
+    let goOverlayBtn = document.getElementById("go-overlay-btn");
+    if (!goOverlayBtn) {
+        goOverlayBtn = document.createElement("button");
+        goOverlayBtn.id = "go-overlay-btn";
+        goOverlayBtn.textContent = "Ir para Overlay";
+        goOverlayBtn.style.marginTop = "6px";
+        goOverlayBtn.style.padding = "5px 10px";
+        goOverlayBtn.style.backgroundColor = "#0e0e0e7f";
+        goOverlayBtn.style.color = "white";
+        goOverlayBtn.style.border = "solid";
+        goOverlayBtn.style.borderColor = "#1d1d1d7f";
+        goOverlayBtn.style.borderRadius = "4px";
+        goOverlayBtn.style.cursor = "pointer";
+        goOverlayBtn.style.backdropFilter = "blur(2px)";
+        goOverlayBtn.style.display = overlaySelector.value === "" ? "none" : "block";
+
+        goOverlayBtn.addEventListener("click", () => {
+            if (currentOverlayId !== null) {
+                const name = overlayNames[currentOverlayId] ?? "";
+                const match = name.match(/\?lat=.*?&lng=.*?\]?/);
+                if (match) {
+                    const link = "https://wplace.live/" + match[0];
+                    window.location.href = link; // redireciona para o overlay
+                } else {
+                    alert("Este overlay não tem coordenadas definidas!");
+                }
+            }
+        });
+
+        buttonContainer.appendChild(goOverlayBtn);
+    }
+
+    // Atualiza visibilidade do botão quando muda o seletor
+    overlaySelector.addEventListener("change", (e) => {
+        const val = e.target.value;
+        if (val === "") {
+            currentOverlayId = null;
+            goOverlayBtn.style.display = "none";
+        } else {
+            currentOverlayId = Number(val);
+            goOverlayBtn.style.display = "block";
+        }
+        resetProgress();
+        updateHUD();
+    });
+}
+    
     // Arrastar HUD
     hudHeader.style.cursor = "move";
     let isDragging = false;

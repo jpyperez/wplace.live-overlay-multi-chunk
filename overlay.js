@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wplace Overlay Multi-chunk By Zary + HUD
 // @namespace    http://tampermonkey.net/
-// @version      0.6.0
+// @version      0.6.1
 // @description  Overlay multi-chunk para Wplace.live com HUD, seletor de overlay e botão "Ir para Overlay"
 // @author       llucarius & Zary & ChatGPT
 // @match        https://wplace.live/*

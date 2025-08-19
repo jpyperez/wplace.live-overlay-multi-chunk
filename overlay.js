@@ -121,7 +121,7 @@
     hud.appendChild(hudHeader);
 
     const hudTitle = document.createElement("div");
-    hudTitle.textContent = "Overlay HUD";
+    hudTitle.textContent = "Overlay HUD - By Zary";
     hudTitle.style.fontWeight = "bold";
     hudHeader.appendChild(hudTitle);
 

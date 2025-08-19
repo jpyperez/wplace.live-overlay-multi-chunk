@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @version      0.6.2
 // @description  Overlay multi-chunk para Wplace.live com HUD, seletor de overlay, botão "Ir para Overlay" e filtro de cores faltantes.
-// @author       llucarius & Zary & ChatGPT
+// @author       Zary
 // @match        https://wplace.live/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=zarystore.net
 // @license      MIT

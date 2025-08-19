@@ -1,9 +1,11 @@
 Converter imagens: https://pepoafonso.github.io/color_converter_wplace/<br>
+<br>
 Botões:<br>
 Overlay = Ativo<br>
 Chunk = Mapa Limpo Mostrando Chunks<br>
 Original = Desativado<br>
 <br>
+Cores:<br>
 Verde = Pintado Corretamente<br>
 Colorido = Pintado Errado<br>
 <br>

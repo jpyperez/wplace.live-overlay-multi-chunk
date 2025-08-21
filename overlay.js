@@ -41,7 +41,7 @@
         { lat: 36.34, lng: 127.12 },
         { lat: 34.55, lng: 139.10 },
         { lat: -23.49, lng: -47.01 },
-        { lat: -23.45, lng: -47.01 }
+        { lat: -23.4567, lng: -47.0199 }
     ];
 
     function resetProgress() {

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wplace Overlay Multi-chunk + HUD By Zary
 // @namespace    http://tampermonkey.net/
-// @version      0.6.2
+// @version      0.6.3
 // @description  Overlay multi-chunk para Wplace.live com HUD, seletor de overlay, botão "Ir para Overlay" e filtro de cores faltantes.
 // @author       Zary
 // @match        https://wplace.live/*
@@ -31,7 +31,8 @@
         "Evil Morty",
         "EVE-StelarBlade",
         "Onda Japonesa",
-        "Brasil Imperial"
+        "Brasil Imperial",
+        "Museu do Ipiranga"
     ];
     const overlayCoords = [
         { lat: -23.62, lng: -46.86 },
@@ -39,7 +40,8 @@
         { lat: -24.15, lng: -46.01 },
         { lat: 36.34, lng: 127.12 },
         { lat: 34.55, lng: 139.10 },
-        { lat: -23.49, lng: -47.01 }
+        { lat: -23.49, lng: -47.01 },
+        { lat: -23.45, lng: -47.01 }
     ];
 
     function resetProgress() {

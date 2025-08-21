@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wplace Overlay Multi-chunk + HUD By Zary
 // @namespace    http://tampermonkey.net/
-// @version      0.6.3
+// @version      0.6.4
 // @description  Overlay multi-chunk para Wplace.live com HUD, seletor de overlay, botão "Ir para Overlay" e filtro de cores faltantes.
 // @author       Zary
 // @match        https://wplace.live/*
@@ -35,12 +35,12 @@
         "Museu do Ipiranga"
     ];
     const overlayCoords = [
-        { lat: -23.62, lng: -46.86 },
-        { lat: -23.09, lng: -46.04 },
-        { lat: -24.15, lng: -46.01 },
+        { lat: -23.6260, lng: -46.8656 },
+        { lat: -23.0914, lng: -46.0435 },
+        { lat: -24.1511, lng: -46.0176 },
         { lat: 36.34, lng: 127.12 },
         { lat: 34.55, lng: 139.10 },
-        { lat: -23.49, lng: -47.01 },
+        { lat: -23.4968, lng: -47.0192 },
         { lat: -23.4567, lng: -47.0199 }
     ];
 
@@ -80,6 +80,7 @@
                 overlayCtx.drawImage(sourceCanvas, sx, sy, sw, sh, dx, dy, sw, sh);
 
                 overlays.push({
+                    overlayId: overlaysRaw.indexOf(obj), // <- guarda o índice do overlay
                     chunk: [cx, cy],
                     chunksString: `/${cx}/${cy}.png`,
                     imageData: overlayCtx.getImageData(0, 0, CHUNK_WIDTH, CHUNK_HEIGHT)
@@ -244,6 +245,7 @@
             if (overlayMode === "overlay" && currentOverlayId !== null) {
                 if (url.hostname === "backend.wplace.live" && url.pathname.startsWith("/files/")) {
                     for (const obj of overlays) {
+                        if (obj.overlayId !== currentOverlayId) continue; // <- só pega o overlay selecionado
                         if (url.pathname.endsWith(obj.chunksString)) {
                             const originalResponse = await target.apply(thisArg, argList);
                             const originalBlob = await originalResponse.blob();

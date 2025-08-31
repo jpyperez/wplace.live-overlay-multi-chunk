@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wplace Overlay Multi-chunk + HUD By Zary
 // @namespace    http://tampermonkey.net/
-// @version      0.6.5
+// @version      0.6.6
 // @description  Overlay multi-chunk para Wplace.live com HUD, seletor de overlay, botão "Ir para Overlay" e filtro de cores faltantes.
 // @author       Zary
 // @match        https://wplace.live/*
@@ -35,7 +35,7 @@
     ];
     const overlayCoords = [
         { lat: -23.6260, lng: -46.8656 },
-        { lat: -23.0914, lng: -46.0435 },
+        { lat: -26.3495, lng: -45.8197 },
         { lat: -24.1511, lng: -46.0176 },
         { lat: 36.34, lng: 127.12 },
         { lat: 34.55, lng: 139.10 },

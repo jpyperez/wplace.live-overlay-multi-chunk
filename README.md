@@ -15,6 +15,8 @@ Funções:<br>
 - HUD com Filtro de Cores (Mostra todas as cores que faltam com opção de filtrar apenas as cores selecionadas)<br>
 - Botão "Ir para Overlay" (Selecione o Overlay e clique no botão para ser direcionado até a localização da arte)<br>
 <br>
+Tutorial: https://www.youtube.com/embed/J7yCKNKH9RM
+<br><br>
 <div align="center">
   <img src="https://i.imgur.com/tyxkFQa.gif" alt="Evil Morty - Change">
 </div>

@@ -1,5 +1,3 @@
-Converter imagens: https://pepoafonso.github.io/color_converter_wplace/<br>
-<br>
 Botões:<br>
 Overlay = Ativo<br>
 Chunk = Mapa Limpo Mostrando Chunks<br>
@@ -16,7 +14,8 @@ Funções:<br>
 - Botão "Ir para Overlay" (Selecione o Overlay e clique no botão para ser direcionado até a localização da arte)<br>
 <br>
 Tutorial: https://www.youtube.com/watch?v=J7yCKNKH9RM
-<br><br>
+<br>
+Converter imagens: https://pepoafonso.github.io/color_converter_wplace/<br><br>
 <div align="center">
   <img src="https://i.imgur.com/tyxkFQa.gif" alt="Evil Morty - Change">
 </div>

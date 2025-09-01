@@ -1,3 +1,4 @@
+**DESATIVE OUTROS OVERLAYS PARA FUNCIONAR E ATIVE O MODO DESENVOLVEDOR NO SEU NAVEGADOR (Chrome/Opera)**<br><br>
 Botões:<br>
 Overlay = Ativo<br>
 Chunk = Mapa Limpo Mostrando Chunks<br>

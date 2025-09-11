@@ -31,7 +31,8 @@
         "Evil Morty",
         "EVE-StelarBlade",
         "Onda Japonesa",
-        "Brasil Imperial"
+        "Brasil Imperial",
+        "Árvore do Mundo"
     ];
     const overlayCoords = [
         { lat: -23.6260, lng: -46.8656 },

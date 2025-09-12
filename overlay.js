@@ -32,7 +32,7 @@
         "EVE-StelarBlade",
         "Onda Japonesa",
         "Brasil Imperial",
-        "Árvore do Mundo"
+        "Teste - Ignore"
     ];
     const overlayCoords = [
         { lat: -23.6260, lng: -46.8656 },

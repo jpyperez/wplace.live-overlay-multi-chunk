@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wplace Overlay Multi-chunk + HUD By Zary
 // @namespace    http://tampermonkey.net/
-// @version      0.6.10
+// @version      0.7.0
 // @description  Overlay multi-chunk para Wplace.live com HUD, seletor de overlay, botão "Ir para Overlay" e filtro de cores faltantes.
 // @author       Zary
 // @match        https://wplace.live/*
@@ -20,28 +20,21 @@
     const CHUNK_HEIGHT = 1000;
 
     const overlaysRaw = await fetchData();
-    const overlays = [];
     let currentOverlayId = null;
     let overlayProgress = {};
-    const selectedColors = []; // cores selecionadas no filtro
+    const selectedColors = []; // filtro de cores
 
     const overlayNames = [
         "Onça",
         "Pardo Moggada",
         "Evil Morty",
-        "EVE-StelarBlade",
-        "Onda Japonesa",
-        "Brasil Imperial",
-        "Teste - Ignore"
+        "Brasil Imperial"
     ];
     const overlayCoords = [
         { lat: -23.6260, lng: -46.8656 },
         { lat: -23.6777, lng: -47.1396 },
         { lat: -24.1511, lng: -46.0176 },
-        { lat: 36.34, lng: 127.12 },
-        { lat: 34.55, lng: 139.10 },
-        { lat: -23.4968, lng: -47.0192 },
-        { lat: -26.3495, lng: -45.8197 }
+        { lat: -23.4968, lng: -47.0192 }
     ];
 
     function resetProgress() {
@@ -49,48 +42,23 @@
         updateHUD();
     }
 
+    // prepara overlays como canvas únicos
     for (const obj of overlaysRaw) {
         const { img, width, height } = await loadImage(obj.url);
         const startX = obj.chunk[0] * CHUNK_WIDTH + obj.coords[0];
         const startY = obj.chunk[1] * CHUNK_HEIGHT + obj.coords[1];
-        const endX = startX + width;
-        const endY = startY + height;
-        const chunkStartX = Math.floor(startX / CHUNK_WIDTH);
-        const chunkStartY = Math.floor(startY / CHUNK_HEIGHT);
-        const chunkEndX = Math.floor((endX - 1) / CHUNK_WIDTH);
-        const chunkEndY = Math.floor((endY - 1) / CHUNK_HEIGHT);
 
         const sourceCanvas = new OffscreenCanvas(width, height);
         const sourceCtx = sourceCanvas.getContext("2d");
         sourceCtx.drawImage(img, 0, 0, width, height);
 
-        for (let cx = chunkStartX; cx <= chunkEndX; cx++) {
-            for (let cy = chunkStartY; cy <= chunkEndY; cy++) {
-                const chunkOffsetX = cx * CHUNK_WIDTH;
-                const chunkOffsetY = cy * CHUNK_HEIGHT;
-                const overlayCanvas = new OffscreenCanvas(CHUNK_WIDTH, CHUNK_HEIGHT);
-                const overlayCtx = overlayCanvas.getContext("2d");
-                const sx = Math.max(0, chunkOffsetX - startX);
-                const sy = Math.max(0, chunkOffsetY - startY);
-                const sw = Math.min(width - sx, CHUNK_WIDTH);
-                const sh = Math.min(height - sy, CHUNK_HEIGHT);
-                const dx = Math.max(0, startX - chunkOffsetX);
-                const dy = Math.max(0, startY - chunkOffsetY);
-                overlayCtx.clearRect(0, 0, CHUNK_WIDTH, CHUNK_HEIGHT);
-                overlayCtx.drawImage(sourceCanvas, sx, sy, sw, sh, dx, dy, sw, sh);
-
-                overlays.push({
-                    overlayId: overlaysRaw.indexOf(obj), // <- guarda o índice do overlay
-                    chunk: [cx, cy],
-                    chunksString: `/${cx}/${cy}.png`,
-                    imageData: overlayCtx.getImageData(0, 0, CHUNK_WIDTH, CHUNK_HEIGHT)
-                });
-            }
-        }
+        obj.startX = startX;
+        obj.startY = startY;
+        obj.width = width;
+        obj.height = height;
+        obj.sourceCanvas = sourceCanvas;
+        obj.sourceCtx = sourceCtx;
     }
-
-    const OVERLAY_MODES = ["overlay", "original", "chunks"];
-    let overlayMode = OVERLAY_MODES[0];
 
     // HUD container
     const hud = document.createElement("div");
@@ -124,7 +92,7 @@
     hud.appendChild(hudHeader);
 
     const hudTitle = document.createElement("div");
-    hudTitle.textContent = "Overlay HUD - By Zary";
+    hudTitle.textContent = "Overlay HUD";
     hudTitle.style.fontWeight = "bold";
     hudHeader.appendChild(hudTitle);
 
@@ -166,7 +134,7 @@
     }
 
     function updateHUD() {
-        if (overlayMode !== "overlay" || currentOverlayId === null) {
+        if (currentOverlayId === null) {
             hud.style.display = "none";
             return;
         }
@@ -190,13 +158,12 @@
 
         hudContent.innerHTML = '';
 
-        if (missingPixels === 0) {
+        if (missingPixels === 0 && totalOverlayPixels > 0) {
             hudContent.textContent = "✔️ Completo!";
         } else {
             const text = `Pixels Totais: ${totalOverlayPixels.toLocaleString()}\nPixels Faltando: ${missingPixels.toLocaleString()}\nProgresso: ${percent}%\n\nCores Faltando:\n`;
             hudContent.textContent = text;
 
-            // Lista de cores com checkboxes
             for (const [color, count] of Object.entries(missingColorsCount).sort((a,b)=>b[1]-a[1])) {
                 const line = document.createElement("div");
                 const box = createColorBox(color);
@@ -225,82 +192,123 @@
         }
     }
 
-    // Atualiza HUD a cada 30 segundos
+    // Atualiza HUD a cada 30s
     setInterval(updateHUD, 30000);
 
     function rgbaToCss(r, g, b, a) {
         return `rgba(${r},${g},${b},${a/255})`;
     }
 
+    // Intercepta fetch
     fetch = new Proxy(fetch, {
         apply: async (target, thisArg, argList) => {
             const urlString = typeof argList[0] === "object" ? argList[0].url : argList[0];
             let url;
             try {
                 url = new URL(urlString);
-            } catch (e) {
-                throw new Error("Invalid URL provided to fetch");
+            } catch {
+                return target.apply(thisArg, argList);
             }
 
-            if (overlayMode === "overlay" && currentOverlayId !== null) {
-                if (url.hostname === "backend.wplace.live" && url.pathname.startsWith("/files/")) {
-                    for (const obj of overlays) {
-                        if (obj.overlayId !== currentOverlayId) continue; // <- só pega o overlay selecionado
-                        if (url.pathname.endsWith(obj.chunksString)) {
-                            const originalResponse = await target.apply(thisArg, argList);
-                            const originalBlob = await originalResponse.blob();
-                            const originalImage = await blobToImage(originalBlob);
-                            const width = originalImage.width;
-                            const height = originalImage.height;
-                            const canvas = new OffscreenCanvas(width, height);
-                            const ctx = canvas.getContext("2d", { willReadFrequently: true });
-                            ctx.drawImage(originalImage, 0, 0, width, height);
-                            const originalData = ctx.getImageData(0, 0, width, height);
-                            const resultData = ctx.getImageData(0, 0, width, height);
+            if (currentOverlayId !== null && url.hostname === "backend.wplace.live" && url.pathname.startsWith("/files/")) {
+                const overlay = overlaysRaw[currentOverlayId];
+                if (!overlay.sourceCanvas) return target.apply(thisArg, argList);
 
-                            const d1 = originalData.data;
-                            const d2 = obj.imageData.data;
-                            const dr = resultData.data;
-                            let greenPixels = 0;
-                            let totalOverlayPixels = 0;
-                            const missingColorsCount = {};
+                const match = url.pathname.match(/\/(\d+)\/(\d+)\.png$/);
+                if (!match) return target.apply(thisArg, argList);
+                const [cx, cy] = [parseInt(match[1]), parseInt(match[2])];
+                const chunkOffsetX = cx * CHUNK_WIDTH;
+                const chunkOffsetY = cy * CHUNK_HEIGHT;
 
-                            for (let i=0;i<d1.length;i+=4){
-                                const isTransparent = d2[i]===0 && d2[i+1]===0 && d2[i+2]===0 && d2[i+3]===0;
-                                const samePixel = d1[i]===d2[i] && d1[i+1]===d2[i+1] && d1[i+2]===d2[i+2] && d1[i+3]===d2[i+3];
+                // limites do overlay
+                const overlayStartX = overlay.chunk[0] * CHUNK_WIDTH + overlay.coords[0];
+                const overlayStartY = overlay.chunk[1] * CHUNK_HEIGHT + overlay.coords[1];
+                const overlayEndX = overlayStartX + overlay.width;
+                const overlayEndY = overlayStartY + overlay.height;
 
-                                const rgbaColor = rgbaToCss(d2[i], d2[i+1], d2[i+2], d2[i+3]);
+                // limites do chunk atual
+                const chunkEndX = chunkOffsetX + CHUNK_WIDTH;
+                const chunkEndY = chunkOffsetY + CHUNK_HEIGHT;
 
-                                if (samePixel && !isTransparent){
-                                    dr[i]=0; dr[i+1]=255; dr[i+2]=0; dr[i+3]=255;
-                                    greenPixels++;
-                                    totalOverlayPixels++;
-                                } else if (!isTransparent){
-                                    // FILTRO DE CORES
-                                    if (selectedColors.length===0 || selectedColors.includes(rgbaColor)){
-                                        dr[i]=d2[i];
-                                        dr[i+1]=d2[i+1];
-                                        dr[i+2]=d2[i+2];
-                                        dr[i+3]=d2[i+3];
-                                    } else {
-                                        dr[i+3] = 0; // transparente se não selecionada
-                                    }
-                                    totalOverlayPixels++;
-                                    missingColorsCount[rgbaColor]=(missingColorsCount[rgbaColor]||0)+1;
+                // checa interseção real
+                if (chunkOffsetX >= overlayEndX || chunkEndX <= overlayStartX ||
+                    chunkOffsetY >= overlayEndY || chunkEndY <= overlayStartY) {
+                    return target.apply(thisArg, argList); // sem interseção
+                }
+
+                // pega o original
+                const originalResponse = await target.apply(thisArg, argList);
+                const originalBlob = await originalResponse.blob();
+                const originalImage = await blobToImage(originalBlob);
+                const canvas = new OffscreenCanvas(CHUNK_WIDTH, CHUNK_HEIGHT);
+                const ctx = canvas.getContext("2d", { willReadFrequently: true });
+                ctx.drawImage(originalImage, 0, 0);
+                const originalData = ctx.getImageData(0, 0, CHUNK_WIDTH, CHUNK_HEIGHT);
+                const resultData = ctx.getImageData(0, 0, CHUNK_WIDTH, CHUNK_HEIGHT);
+
+                const d1 = originalData.data;
+                const dr = resultData.data;
+
+                // calcula região a ser desenhada
+                const srcX = Math.max(0, chunkOffsetX - overlayStartX);
+                const srcY = Math.max(0, chunkOffsetY - overlayStartY);
+                const drawX = Math.max(0, overlayStartX - chunkOffsetX);
+                const drawY = Math.max(0, overlayStartY - chunkOffsetY);
+                const drawW = Math.min(CHUNK_WIDTH - drawX, overlay.width - srcX);
+                const drawH = Math.min(CHUNK_HEIGHT - drawY, overlay.height - srcY);
+
+                // extrai só a parte válida do overlay
+                const overlayPart = overlay.sourceCtx.getImageData(srcX, srcY, drawW, drawH).data;
+
+                let greenPixels = 0;
+                let totalOverlayPixels = 0;
+                const missingColorsCount = {};
+
+                for (let row = 0; row < drawH; row++) {
+                    for (let col = 0; col < drawW; col++) {
+                        const srcIndex = (row * drawW + col) * 4;
+                        const destIndex = ((row + drawY) * CHUNK_WIDTH + (col + drawX)) * 4;
+
+                        const r = overlayPart[srcIndex];
+                        const g = overlayPart[srcIndex + 1];
+                        const b = overlayPart[srcIndex + 2];
+                        const a = overlayPart[srcIndex + 3];
+
+                        const samePixel = (d1[destIndex] === r && d1[destIndex + 1] === g &&
+                                           d1[destIndex + 2] === b && d1[destIndex + 3] === a);
+
+                        if (a !== 0) {
+                            if (samePixel) {
+                                dr[destIndex] = 0;
+                                dr[destIndex + 1] = 255;
+                                dr[destIndex + 2] = 0;
+                               dr[destIndex + 3] = 255;
+                                greenPixels++;
+                            } else {
+                                const rgbaColor = rgbaToCss(r,g,b,a);
+                                if (selectedColors.length === 0 || selectedColors.includes(rgbaColor)) {
+                                    dr[destIndex] = r;
+                                    dr[destIndex + 1] = g;
+                                    dr[destIndex + 2] = b;
+                                    dr[destIndex + 3] = a;
+                                } else {
+                                    dr[destIndex + 3] = 0;
                                 }
+                                missingColorsCount[rgbaColor] = (missingColorsCount[rgbaColor] || 0) + 1;
                             }
-
-                            ctx.putImageData(resultData,0,0);
-                            const mergedBlob = await canvas.convertToBlob();
-                            overlayProgress[obj.chunksString.slice(1,-4)]={greenPixels,totalOverlayPixels,missingColorsCount};
-                            updateHUD();
-                            return new Response(mergedBlob,{headers:{"Content-Type":"image/png"}});
+                            totalOverlayPixels++;
                         }
                     }
                 }
+
+                ctx.putImageData(resultData, 0, 0);
+                const mergedBlob = await canvas.convertToBlob();
+                overlayProgress[`${cx}/${cy}`] = { greenPixels, totalOverlayPixels, missingColorsCount };
+                updateHUD();
+                return new Response(mergedBlob, { headers: { "Content-Type": "image/png" } });
             }
 
-            return target.apply(thisArg,argList);
+            return target.apply(thisArg, argList);
         }
     });
 
@@ -332,35 +340,7 @@
         const buttonContainer = document.querySelector("div.gap-4:nth-child(1) > div:nth-child(2)");
         if (!buttonContainer) return;
 
-        // Botão blend
-        let blendButton = document.getElementById("overlay-blend-button");
-        if (!blendButton) {
-            blendButton = document.createElement("button");
-            blendButton.id = "overlay-blend-button";
-            blendButton.textContent = overlayMode.charAt(0).toUpperCase() + overlayMode.slice(1);
-            blendButton.style.backgroundColor = "#0e0e0e7f";
-            blendButton.style.color = "white";
-            blendButton.style.border = "solid";
-            blendButton.style.borderColor = "#1d1d1d7f";
-            blendButton.style.borderRadius = "4px";
-            blendButton.style.padding = "5px 10px";
-            blendButton.style.cursor = "pointer";
-            blendButton.style.backdropFilter = "blur(2px)";
-
-            blendButton.addEventListener("click", () => {
-                overlayMode = OVERLAY_MODES[(OVERLAY_MODES.indexOf(overlayMode) + 1) % OVERLAY_MODES.length];
-                blendButton.textContent = overlayMode.charAt(0).toUpperCase() + overlayMode.slice(1);
-                resetProgress();
-                updateHUD();
-            });
-
-            buttonContainer.appendChild(blendButton);
-
-            buttonContainer.classList.remove("items-center");
-            buttonContainer.classList.add("items-end");
-        }
-
-        // Seletor de overlay
+        // seletor overlay
         let overlaySelector = document.getElementById("overlay-selector");
         if (!overlaySelector) {
             overlaySelector = document.createElement("select");
@@ -430,6 +410,7 @@
         }
     }
 
+    // HUD arrastável
     hudHeader.style.cursor = "move";
     let isDragging = false;
     let dragOffsetX = 0;

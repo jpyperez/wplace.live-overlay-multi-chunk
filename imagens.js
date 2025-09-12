@@ -5,5 +5,5 @@
   { "url": "https://i.imgur.com/jd7MyPS.png", "chunk": [1746, 801], "coords": [806, 534] },
   { "url": "https://i.imgur.com/2I4j2WE.png", "chunk": [1814, 814], "coords": [905, 244] },
   { "url": "https://i.imgur.com/0yPlth3.png", "chunk": [756, 1161], "coords": [126, 14] },
-  { "url": "https://i.imgur.com/LbbvUtT.png", "chunk": [762, 1179], "coords": [661, 43] }
+  { "url": "https://i.imgur.com/LbbvUtT.png", "chunk": [762, 1179], "coords": [868, 244] }
 ]

@@ -28,13 +28,15 @@
         "Onça",
         "Pardo Moggada",
         "Evil Morty",
-        "Brasil Imperial"
+        "Brasil Imperial",
+        "Evil Morty 2"
     ];
     const overlayCoords = [
         { lat: -23.6260, lng: -46.8656 },
         { lat: -23.6777, lng: -47.1396 },
         { lat: -24.1511, lng: -46.0176 },
-        { lat: -23.4968, lng: -47.0192 }
+        { lat: -23.4968, lng: -47.0192 },
+        { lat: -26.3508, lng: -45.8199 }
     ];
 
     function resetProgress() {

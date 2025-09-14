@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wplace Overlay Multi-chunk + HUD By Zary
 // @namespace    http://tampermonkey.net/
-// @version      0.7.1
+// @version      0.7.2
 // @description  Overlay multi-chunk para Wplace.live com HUD, seletor de overlay, botão "Ir para Overlay" e filtro de cores faltantes.
 // @author       Zary
 // @match        https://wplace.live/*
@@ -29,14 +29,16 @@
         "Pardo Moggada",
         "Evil Morty",
         "Brasil Imperial",
-        "Evil Morty 2"
+        "Evil Morty 2",
+        "Anti-Comuna"
     ];
     const overlayCoords = [
         { lat: -23.6260, lng: -46.8656 },
         { lat: -23.6777, lng: -47.1396 },
         { lat: -24.1511, lng: -46.0176 },
         { lat: -23.4968, lng: -47.0192 },
-        { lat: -26.3508, lng: -45.8199 }
+        { lat: -26.3508, lng: -45.8199 },
+        { lat: -23.7265, lng: -47.1685 }
     ];
 
     function resetProgress() {

@@ -86,7 +86,7 @@
     hud.style.overflowY = "auto";
     hud.style.userSelect = "none";
     hud.style.cursor = "move";
-    hud.style.boxShadow = "0 0 8px rgba(0,255,0,0.7)";
+    hud.style.boxShadow = "0 0 8px rgba(255,212,0,0.7)";
     hud.style.width = "280px";
     hud.style.minWidth = "150px";
     hud.style.minHeight = "80px";

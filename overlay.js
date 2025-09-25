@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wplace Overlay Multi-chunk + HUD By Zary
 // @namespace    http://tampermonkey.net/
-// @version      0.7.6
+// @version      0.7.7
 // @description  Overlay multi-chunk para Wplace.live com HUD, seletor de overlay, botão "Ir para Overlay" e filtro de cores faltantes.
 // @author       Zary
 // @match        https://wplace.live/*
@@ -82,12 +82,12 @@
     hud.style.fontFamily = "monospace, monospace";
     hud.style.fontSize = "13px";
     hud.style.borderRadius = "8px";
-    hud.style.maxHeight = "400px";
+    hud.style.maxHeight = "600px";
     hud.style.overflowY = "auto";
     hud.style.userSelect = "none";
     hud.style.cursor = "move";
     hud.style.boxShadow = "0 0 8px rgba(255,212,0,0.7)";
-    hud.style.width = "280px";
+    hud.style.width = "200px";
     hud.style.minWidth = "150px";
     hud.style.minHeight = "80px";
     hud.style.resize = "both";
@@ -102,7 +102,7 @@
     hud.appendChild(hudHeader);
 
     const hudTitle = document.createElement("div");
-    hudTitle.textContent = "Overlay HUD";
+    hudTitle.textContent = "Overlay HUD - By Zary";
     hudTitle.style.fontWeight = "bold";
     hudHeader.appendChild(hudTitle);
 
@@ -124,10 +124,31 @@
     hud.appendChild(hudContent);
 
     let hudMinimized = false;
+    let prevWidth = hud.style.width;
+    let prevHeight = hud.style.height;
+
     minimizeBtn.onclick = () => {
         hudMinimized = !hudMinimized;
-        hudContent.style.display = hudMinimized ? "none" : "block";
-        minimizeBtn.textContent = hudMinimized ? "+" : "–";
+
+        if (hudMinimized) {
+            // salva o tamanho atual
+            prevWidth = hud.style.width;
+            prevHeight = hud.style.height;
+
+            // volta para o tamanho inicial definido no script
+            hud.style.width = "200px";
+            hud.style.height = "80px";
+
+            hudContent.style.display = "none";
+            minimizeBtn.textContent = "+";
+        } else {
+            // restaura o tamanho anterior
+            hud.style.width = prevWidth;
+            hud.style.height = prevHeight;
+
+            hudContent.style.display = "block";
+            minimizeBtn.textContent = "–";
+        }
     };
 
     function createColorBox(color) {

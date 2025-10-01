@@ -1,4 +1,5 @@
 **DESATIVE OUTROS OVERLAYS PARA FUNCIONAR E ATIVE O MODO DESENVOLVEDOR NO SEU NAVEGADOR (Chrome/Opera)**<br>
+Caso o script não apareça no tampermonkey, botão direito no tampermonkey, clique em gerenciar extensão e ative a função "Permitir scripts de usuário", dê "CTRL + SHIFT + R" no wplace.
 <br>
 Cores:<br>
 Verde = Pintado Corretamente<br>

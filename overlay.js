@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Wplace Overlay Multi-chunk + HUD By jpyperez
+// @name         Wplace Overlay Multi-chunk + HUD By Zary
 // @namespace    http://tampermonkey.net/
 // @version      0.7.10
 // @description  Overlay multi-chunk para Wplace.live com HUD, seletor de overlay, botão "Ir para Overlay" e filtro de cores faltantes.
@@ -8,8 +8,8 @@
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=zarystore.net
 // @license      MIT
 // @grant        none
-// @updateURL    https://raw.githubusercontent.com/jpyperez/wplace.live-overlay-multi-chunk/refs/heads/main/overlay.js
-// @downloadURL  https://raw.githubusercontent.com/jpyperez/wplace.live-overlay-multi-chunk/refs/heads/main/overlay.js
+// @updateURL    https://raw.githubusercontent.com/ZaryImortal/wplace.live-overlay-multi-chunk/refs/heads/main/overlay.js
+// @downloadURL  https://raw.githubusercontent.com/ZaryImortal/wplace.live-overlay-multi-chunk/refs/heads/main/overlay.js
 // ==/UserScript==
 
 
@@ -25,10 +25,30 @@
     const selectedColors = []; // filtro de cores
 
     const overlayNames = [
-        "Camila"
+        "Onça",
+        "Pardo Moggada",
+        "Base Imperial",
+        "Base Imperial 2",
+        "Evil Morty",
+        "Evil Morty 2",
+        "Anti-Comuna",
+        "Yellow space",
+        "Sonic",
+        "Creative Space",
+        "Mini Cristo"
     ];
     const overlayCoords = [
-        { lat: 41.3112, lng: -7.8571 }
+        { lat: -23.6260, lng: -46.8656 },
+        { lat: -23.0914, lng: -46.0435 },
+        { lat: -23.4968, lng: -47.0192 },
+        { lat: -22.5089, lng: -43.1814 },
+        { lat: -24.1511, lng: -46.0176 },
+        { lat: -26.3508, lng: -45.8199 },
+        { lat: -23.7265, lng: -47.1685 },
+        { lat: -23.7276, lng: -46.8653 },
+        { lat: -23.6880, lng: -46.9285 },
+        { lat: -23.5834, lng: -46.9270 },
+        { lat: -23.6679, lng: -46.8382 }
     ];
 
     function resetProgress() {
@@ -328,7 +348,7 @@
     });
 
     function fetchData() {
-        return fetch("https://raw.githubusercontent.com/jpyperez/wplace.live-overlay-multi-chunk/refs/heads/main/imagens.js?" + Date.now())
+        return fetch("https://raw.githubusercontent.com/ZaryImortal/wplace.live-overlay-multi-chunk/refs/heads/main/imagens.js?" + Date.now())
             .then(res => res.json());
     }
 
